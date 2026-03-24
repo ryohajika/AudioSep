@@ -1,0 +1,6 @@
+*.DS_Store
+*.ckpt
+*.pt
+*.wav
+*/__pycache__
+*.pyc

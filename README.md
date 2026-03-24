@@ -1,4 +1,5 @@
-# Separate Anything You Describe
+# Separate Anything You Describe (but forked and modified to work on modern environment by [@ryohajika](https://github.com/ryohajika))
+
 [![arXiv](https://img.shields.io/badge/arXiv-Paper-<COLOR>.svg)](https://arxiv.org/abs/2308.05037) [![GitHub Stars](https://img.shields.io/github/stars/Audio-AGI/AudioSep?style=social)](https://github.com/Audio-AGI/AudioSep/) [![githubio](https://img.shields.io/badge/GitHub.io-Demo_Page-blue?logo=Github&style=flat-square)](https://audio-agi.github.io/Separate-Anything-You-Describe) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Audio-AGI/AudioSep/blob/main/AudioSep_Colab.ipynb) [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/Audio-AGI/AudioSep) [![Replicate](https://replicate.com/cjwbw/audiosep/badge)](https://replicate.com/cjwbw/audiosep) 
 
 
@@ -11,6 +12,56 @@ We introduce AudioSep, a foundation model for open-domain sound separation with 
 </p>
 
 <hr>
+
+## (@ryohajika edit) What I tried / What I modified
+I was building another project based on vanila Python 3.12.13 and wanted to use Pytorch>2 to be future proof.
+As I try the AudioSep original repo I had a difficulty to run that on my environment, since:
+- I'm on macOS-based environment so no CUDA can be used
+- Newer libraries compatibility issues
+- `Transformers` compatibility with CLAP and some libraries (`tokenizers`)
+
+So I forked the original AudioSep library and modified a bit to run the demo project.
+
+As of March 2026 the following procedure works:
+- Setup a virtual environment based on Python 3.12.13
+- Install libraries with `pip` command and the `requirements_pyenv3.12.13_venv.txt`
+- Download pretrained model checkpoints from [hugging face page](https://huggingface.co/spaces/Audio-AGI/AudioSep/tree/main/checkpoint) and place them to `checkpoint`
+
+### Some tips
+- I've got some weight loading error since Pytorch 2.6 changed few things around `torch.load` and `torch.serialization`, so added few lines to `models/CLAP/open_clip/factory.py` as referring to one of the [LAION-AI/CLAP pull request](https://github.com/LAION-AI/CLAP/pull/118/changes/BASE..b058932653cf36325b23b996d17e473e4c655c34#diff-578abd469677f99656565d5cb0491b2714926f9099b5e7073c78321e408e1bee)s
+```python factory.py
+# after line 7
+from packaging import version
+import transformers
+
+# after line 62: state_dict = {k[7:]: v for k, v in state_dict.items()}
+        if version.parse(transformers.__version__) >= version.parse("4.31.0"):
+            del state_dict["text_branch.embeddings.position_ids"]
+```
+- In the script you want to run the inference you should add few lines at the beginning so that you won't get numpy data type warnings:
+```python yourscript.py
+import torch
+import numpy
+
+torch.serialization.add_safe_globals([numpy.core.multiarray.scalar, numpy.dtype, numpy.dtypes.Float64DType])
+```
+
+That would clear all the loading errors.
+Taking some part of the example code from `AudioSep_Colab.ipynb`,
+```python test.py
+device = torch.device('mps' if torch.mps.is_available() else 'cpu')
+```
+also worked.
+
+## What environment I did use
+I tested the following procedures on my macOS system:
+- MacBook Pro 16" with M5 Pro processor
+- macOS 26.3.1 (a)
+- Python 3.12.13 installed via [pyenv](https://github.com/pyenv/pyenv)
+- Virtual Environment installed with [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv)
+- Libraries installed with pip including `tokenizers>=0.14.0,<0.15`, `transformers==4.34.0`, `torch==2.10.0`
+
+## The rest is the original README:
 
 ## Setup
 Clone the repository and setup the conda environment: 
